@@ -13,7 +13,7 @@ type EstoqueRepository interface {
 	CriarProduto(ctx context.Context, nome string, saldo int32) (*db.EstoqueProduto, error)
 	ListarProdutos(ctx context.Context) ([]db.EstoqueProduto, error)
 	BuscarProdutoPorId(ctx context.Context, id pgtype.UUID) (*db.EstoqueProduto, error)
-	DebitarEstoqueAtomico(ctx context.Context, id pgtype.UUID, quantidade int32) (*db.EstoqueProduto, error)
+	DebitarEstoqueAtomico(ctx context.Context, id pgtype.UUID, quantidade int32) (*db.DebitarEstoqueAtomicoRow, error)
 	RegistrarMovimentacao(ctx context.Context, params db.RegistrarMovimentacaoParams) (*db.EstoqueMovimentaco, error)
 	ListarMovimentacoesProduto(ctx context.Context, produtoID pgtype.UUID) ([]db.EstoqueMovimentaco, error)
 }
@@ -46,7 +46,7 @@ func (r *estoqueRepository) ListarProdutos(ctx context.Context) ([]db.EstoquePro
 	return produtos, nil
 }
 
-func (r *estoqueRepository) BuscarProdutoPorId(ctx context.Context, id pgtype.UUID) (*db.EstoqueProduto, err) {
+func (r *estoqueRepository) BuscarProdutoPorId(ctx context.Context, id pgtype.UUID) (*db.EstoqueProduto, error) {
 	produto, err := r.queries.BuscarProdutoPorId(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("repository.BuscarProdutoPorId: %w", err)
@@ -55,10 +55,10 @@ func (r *estoqueRepository) BuscarProdutoPorId(ctx context.Context, id pgtype.UU
 	return &produto, nil
 }
 
-func (r *estoqueRepository) DebitarEstoqueAtomico(ctx context.Context, id pgtype.UUID, quantidade int32) (*db.EstoqueProduto, error) {
+func (r *estoqueRepository) DebitarEstoqueAtomico(ctx context.Context, id pgtype.UUID, quantidade int32) (*db.DebitarEstoqueAtomicoRow, error) {
 	produtoDebitado, err := r.queries.DebitarEstoqueAtomico(ctx, db.DebitarEstoqueAtomicoParams{
-		ID:    id,
-		Saldo: quantidade,
+		Column1: id,
+		Column2: quantidade,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("repository.DebitarEstoqueAtomico: %w", err)
@@ -67,16 +67,16 @@ func (r *estoqueRepository) DebitarEstoqueAtomico(ctx context.Context, id pgtype
 	return &produtoDebitado, nil
 }
 
-func (r *estoqueRepository) RegistrarMovimentacao(ctx context.Context, params db.RegistrarMovimentacaoParams) (*db.EstoqueMovimentacao, error) {
+func (r *estoqueRepository) RegistrarMovimentacao(ctx context.Context, params db.RegistrarMovimentacaoParams) (*db.EstoqueMovimentaco, error) {
 	mov, err := r.queries.RegistrarMovimentacao(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("repository.RegistrarMovimentacao: %w", err)
 	}
 
-	return mov, nil
+	return &mov, nil
 }
 
-func (r *estoqueRepository) ListarMovimentacoesProduto(ctx, produtoID pgtype.UUID) ([]db.EstoqueMovimentacao, error) {
+func (r *estoqueRepository) ListarMovimentacoesProduto(ctx context.Context, produtoID pgtype.UUID) ([]db.EstoqueMovimentaco, error) {
 	movEstoque, err := r.queries.ListarMovimentacoesProduto(ctx, produtoID)
 	if err != nil {
 		return nil, fmt.Errorf("repository.ListarMovimentacoesProduto: %w", err)

@@ -17,7 +17,7 @@ type FaturamentoRepository interface {
 	ListarNotas(ctx context.Context) ([]db.FaturamentoNota, error)
 	BuscarItemsNota(ctx context.Context, notaID pgtype.UUID) ([]db.FaturamentoNotaItem, error)
 	FecharNotaAtomica(ctx context.Context, id pgtype.UUID) (*db.FaturamentoNota, error)
-	VerificarStatusNota(ctx context.Context, id pgype.UUID) (string, error)
+	VerificarStatusNota(ctx context.Context, id pgtype.UUID) (string, error)
 }
 
 type faturamentoRepository struct {
@@ -90,7 +90,7 @@ func (r *faturamentoRepository) FecharNotaAtomica(ctx context.Context, id pgtype
 func (r *faturamentoRepository) VerificarStatusNota(ctx context.Context, id pgtype.UUID) (string, error) {
 	status, err := r.queries.VerificarStatusNota(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("repository.VerificarStatusNota: %w", err)
+		return "", fmt.Errorf("repository.VerificarStatusNota: %w", err)
 	}
 	return status, nil
 }
