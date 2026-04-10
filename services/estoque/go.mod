@@ -1,4 +1,4 @@
-module github.com/luis-octavius/Korp_Teste_Luis_Octavio/services/faturamento
+module github.com/luis-octavius/Korp_Teste_Luis_Octavio/services/estoque
 
 go 1.26.2
 
