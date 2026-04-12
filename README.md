@@ -4,9 +4,9 @@ Sistema de emissão de Notas Fiscais desenvolvido como teste técnico para a Kor
 
 ## Arquitetura  
 
+O sistema é composto por dois microsserviços independentes que se comunicam via HTTP, compartilhando um único banco de dados PostgreSQL com schemas isolados.  
+
 ```text
-O sistema é composto por dois microsserviços independentes que se comunicam via HTTP,
-compartilhando um único banco de dados PostgreSQL com schemas isolados.  
 frontend/          → Aplicação Angular  
 services/  
 estoque/         → Controle de produtos e saldos (porta 8080)  
