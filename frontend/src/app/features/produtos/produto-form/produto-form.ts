@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,6 +29,7 @@ export class ProdutoFormComponent {
   private readonly produtoService = inject(ProdutoService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   salvando = false;
 
@@ -41,6 +42,7 @@ export class ProdutoFormComponent {
     if (this.form.invalid) return;
 
     this.salvando = true;
+    this.cdr.detectChanges();
     this.produtoService
       .criar({
         nome: this.form.value.nome!,
@@ -53,6 +55,7 @@ export class ProdutoFormComponent {
         error: () => {
           // Erro já tratado pelo interceptor global
           this.salvando = false;
+          this.cdr.detectChanges();
         },
       });
   }

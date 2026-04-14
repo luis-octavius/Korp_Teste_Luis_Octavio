@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { finalize, take } from 'rxjs';
 
 import { NotaService } from '../../../core/services/nota.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner';
@@ -38,15 +39,19 @@ export class NotasListComponent implements OnInit {
 
   carregarNotas(): void {
     this.carregando = true;
-    this.notaService.listar().subscribe({
-      next: (notas) => {
-        this.notas = notas;
-        this.carregando = false;
-      },
-      error: () => {
-        this.carregando = false;
-      },
-    });
+    this.notaService
+      .listar()
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.carregando = false;
+        }),
+      )
+      .subscribe({
+        next: (notas) => {
+          this.notas = Array.isArray(notas) ? [...notas] : [];
+        },
+      });
   }
 
   novaNota(): void {

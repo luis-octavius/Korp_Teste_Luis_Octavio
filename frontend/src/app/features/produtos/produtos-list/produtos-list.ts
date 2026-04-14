@@ -4,6 +4,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { finalize, take } from 'rxjs';
 
 import { ProdutoService } from '../../../core/services/produto.service';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner';
@@ -30,16 +31,20 @@ export class ProdutosListComponent implements OnInit {
 
   carregarProdutos(): void {
     this.carregando = true;
-    this.produtoService.listar().subscribe({
-      next: (produtos) => {
-        this.produtos = produtos;
-        this.carregando = false;
-      },
-      error: () => {
-        // Erro já tratado pelo interceptor global
-        this.carregando = false;
-      },
-    });
+    this.produtoService
+      .listar()
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.carregando = false;
+        }),
+      )
+      .subscribe({
+        next: (produtos) => {
+          // Always assign a new reference so table updates reliably.
+          this.produtos = Array.isArray(produtos) ? [...produtos] : [];
+        },
+      });
   }
 
   novoProduto(): void {

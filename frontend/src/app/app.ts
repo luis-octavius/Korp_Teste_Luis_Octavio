@@ -20,6 +20,6 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class AppComponent {
+export class App {
   title = 'Korp ERP';
 }
