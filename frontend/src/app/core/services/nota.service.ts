@@ -42,6 +42,12 @@ export class NotaService {
       .pipe(catchError((err) => throwError(() => err)));
   }
 
+  removerItem(notaId: string, itemId: string): Observable<void> {
+    return this.http
+      .delete<void>(`${this.baseUrl}/notas/${notaId}/itens/${itemId}`)
+      .pipe(catchError((err) => throwError(() => err)));
+  }
+
   imprimir(notaId: string): Observable<ImprimirNotaResponse> {
     return this.http
       .post<ImprimirNotaResponse>(`${this.baseUrl}/notas/${notaId}/imprimir`, {})

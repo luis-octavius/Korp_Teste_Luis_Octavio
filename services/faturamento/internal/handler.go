@@ -29,6 +29,7 @@ func (h *FaturamentoHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/", h.ListarNotas)
 		r.Get("/{id}", h.BuscarNota)
 		r.Post("/{id}/itens", h.AdicionarItens)
+		r.Delete("/{id}/itens/{itemId}", h.RemoverItem)
 		r.Post("/{id}/imprimir", h.ImprimirNota)
 	})
 }
@@ -127,6 +128,38 @@ func (h *FaturamentoHandler) AdicionarItens(w http.ResponseWriter, r *http.Reque
 	}
 
 	respondJSON(w, http.StatusOK, map[string]string{"mensagem": "itens adicionados com sucesso"})
+}
+
+// DELETE /notas/{id}/itens/{itemId}
+// Endpoint para remover item de uma nota aberta.
+func (h *FaturamentoHandler) RemoverItem(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		respondError(w, http.StatusBadRequest, "id é obrigatório")
+		return
+	}
+
+	itemID := chi.URLParam(r, "itemId")
+	if itemID == "" {
+		respondError(w, http.StatusBadRequest, "itemId é obrigatório")
+		return
+	}
+
+	if err := h.service.RemoverItem(r.Context(), id, itemID); err != nil {
+		if isInputValidationError(err) {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			respondError(w, http.StatusNotFound, "item não encontrado")
+			return
+		}
+
+		respondError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // POST /notas/{id}/imprimir

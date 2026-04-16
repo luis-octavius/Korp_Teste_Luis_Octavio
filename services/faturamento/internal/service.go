@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/luis-octavius/Korp_Teste_Luis_Octavio/services/faturamento/db/gen"
@@ -17,6 +18,7 @@ import (
 type FaturamentoService interface {
 	CriarNota(ctx context.Context) (*CriarNotaResponse, error)
 	AdicionarItens(ctx context.Context, req AdicionarItemRequest) error
+	RemoverItem(ctx context.Context, notaID string, itemID string) error
 	BuscarNota(ctx context.Context, id string) (*NotaDetalheResponse, error)
 	ListarNotas(ctx context.Context) ([]CriarNotaResponse, error)
 	ImprimirNota(ctx context.Context, id string) (*ImprimirNotaResponse, error)
@@ -78,6 +80,14 @@ func (s *faturamentoService) AdicionarItens(ctx context.Context, req AdicionarIt
 			return fmt.Errorf("service.AdicionarItens: produto_id inválido %s: %w", item.ProdutoID, err)
 		}
 
+		produto, err := s.buscarProduto(ctx, item.ProdutoID)
+		if err != nil {
+			return fmt.Errorf("service.AdicionarItens: não foi possível validar saldo do produto %s: %w", item.ProdutoID, err)
+		}
+		if item.Quantidade > produto.Saldo {
+			return fmt.Errorf("service.AdicionarItens: quantidade %d excede saldo disponível (%d) para o produto %s", item.Quantidade, produto.Saldo, item.ProdutoID)
+		}
+
 		itens = append(itens, db.AdicionarItemNotaParams{
 			NotaID:     notaUUID,
 			ProdutoID:  produtoUUID,
@@ -87,6 +97,36 @@ func (s *faturamentoService) AdicionarItens(ctx context.Context, req AdicionarIt
 
 	if err := s.repo.AdicionarItensNotaAtomico(ctx, itens); err != nil {
 		return fmt.Errorf("service.AdicionarItens: erro ao adicionar itens da nota: %w", err)
+	}
+
+	return nil
+}
+
+func (s *faturamentoService) RemoverItem(ctx context.Context, notaID string, itemID string) error {
+	notaUUID, err := parseUUID(notaID)
+	if err != nil {
+		return fmt.Errorf("service.RemoverItem: nota_id inválido: %w", err)
+	}
+
+	itemUUID, err := parseUUID(itemID)
+	if err != nil {
+		return fmt.Errorf("service.RemoverItem: item_id inválido: %w", err)
+	}
+
+	status, err := s.repo.VerificarStatusNota(ctx, notaUUID)
+	if err != nil {
+		return fmt.Errorf("service.RemoverItem: nota não encontrada: %w", err)
+	}
+	if status != "ABERTA" {
+		return fmt.Errorf("service.RemoverItem: nota %s não está aberta", notaID)
+	}
+
+	removed, err := s.repo.RemoverItemNota(ctx, notaUUID, itemUUID)
+	if err != nil {
+		return fmt.Errorf("service.RemoverItem: erro ao remover item: %w", err)
+	}
+	if !removed {
+		return fmt.Errorf("service.RemoverItem: %w", pgx.ErrNoRows)
 	}
 
 	return nil

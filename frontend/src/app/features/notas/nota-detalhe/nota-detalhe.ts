@@ -40,7 +40,7 @@ export class NotaDetalheComponent implements OnInit {
   nota: NotaDetalhe | null = null;
   carregando = false;
   imprimindo = false;
-  colunas = ['produto_nome', 'quantidade'];
+  removendoItemIds = new Set<string>();
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -92,6 +92,38 @@ export class NotaDetalheComponent implements OnInit {
 
   voltar(): void {
     this.router.navigate(['/notas']);
+  }
+
+  removerItem(itemId: string): void {
+    if (!this.nota || this.nota.status !== 'ABERTA') return;
+
+    this.removendoItemIds.add(itemId);
+
+    this.notaService
+      .removerItem(this.nota.id, itemId)
+      .pipe(finalize(() => this.removendoItemIds.delete(itemId)))
+      .subscribe({
+        next: () => {
+          this.nota = {
+            ...this.nota!,
+            items: this.nota!.items.filter((item) => item.id !== itemId),
+          };
+        },
+        error: () => {
+          // Erro já tratado pelo interceptor global via snackbar
+        },
+      });
+  }
+
+  estaRemovendo(itemId: string): boolean {
+    return this.removendoItemIds.has(itemId);
+  }
+
+  get colunas(): string[] {
+    if (this.nota?.status === 'ABERTA') {
+      return ['produto_nome', 'quantidade', 'acoes'];
+    }
+    return ['produto_nome', 'quantidade'];
   }
 
   get totalItens(): number {

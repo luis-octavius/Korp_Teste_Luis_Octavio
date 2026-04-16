@@ -33,7 +33,9 @@
         <mat-form-field appearance="outline" class="campo">
           <mat-label>Quantidade</mat-label>
           <input matInput type="number" formControlName="quantidade" min="1" />
-          @if (itemForm.get('quantidade')?.invalid && itemForm.get('quantidade')?.touched) {
+          @if (itemForm.get('quantidade')?.hasError('estoqueInsuficiente')) {
+          <mat-error>Quantidade maior que o saldo disponível em estoque.</mat-error>
+          } @else if (itemForm.get('quantidade')?.invalid && itemForm.get('quantidade')?.touched) {
           <mat-error>Quantidade deve ser maior que zero</mat-error>
           }
         </mat-form-field>

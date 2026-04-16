@@ -15,6 +15,7 @@ type FaturamentoRepository interface {
 	CriarNota(ctx context.Context) (*db.FaturamentoNota, error)
 	AdicionarItemNota(ctx context.Context, params db.AdicionarItemNotaParams) (*db.FaturamentoNotaItem, error)
 	AdicionarItensNotaAtomico(ctx context.Context, itens []db.AdicionarItemNotaParams) error
+	RemoverItemNota(ctx context.Context, notaID, itemID pgtype.UUID) (bool, error)
 	BuscarNotaPorId(ctx context.Context, id pgtype.UUID) (*db.FaturamentoNota, error)
 	BuscarNotaPorNumero(ctx context.Context, numSeq int64) (*db.FaturamentoNota, error)
 	ListarNotas(ctx context.Context) ([]db.FaturamentoNota, error)
@@ -75,6 +76,21 @@ func (r *faturamentoRepository) AdicionarItensNotaAtomico(ctx context.Context, i
 
 	tx = nil
 	return nil
+}
+
+func (r *faturamentoRepository) RemoverItemNota(ctx context.Context, notaID, itemID pgtype.UUID) (bool, error) {
+	commandTag, err := r.db.Exec(ctx,
+		`DELETE FROM faturamento.nota_items
+		 WHERE id = $1
+		   AND nota_id = $2`,
+		itemID,
+		notaID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("repository.RemoverItemNota: %w", err)
+	}
+
+	return commandTag.RowsAffected() > 0, nil
 }
 
 func (r *faturamentoRepository) BuscarNotaPorId(ctx context.Context, id pgtype.UUID) (*db.FaturamentoNota, error) {

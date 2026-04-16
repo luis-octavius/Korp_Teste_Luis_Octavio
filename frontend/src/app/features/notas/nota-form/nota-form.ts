@@ -70,11 +70,26 @@ export class NotaFormComponent implements OnInit {
     if (this.itemForm.invalid) return;
 
     const { produto_id, quantidade } = this.itemForm.value;
+    const quantidadeControl = this.itemForm.get('quantidade');
+
+    if (quantidadeControl?.hasError('estoqueInsuficiente')) {
+      const { estoqueInsuficiente, ...outrosErros } = quantidadeControl.errors ?? {};
+      quantidadeControl.setErrors(Object.keys(outrosErros).length ? outrosErros : null);
+    }
 
     // Evita duplicar o mesmo produto
     const jaAdicionado = this.itens.some((i) => i.produto_id === produto_id);
     if (jaAdicionado) {
       this.itemForm.get('produto_id')?.setErrors({ duplicado: true });
+      return;
+    }
+
+    const produtoSelecionado = this.produtos.find((p) => p.id === produto_id);
+    if (produtoSelecionado && quantidade! > produtoSelecionado.saldo) {
+      quantidadeControl?.setErrors({
+        ...(quantidadeControl.errors ?? {}),
+        estoqueInsuficiente: true,
+      });
       return;
     }
 
