@@ -59,7 +59,6 @@ func (s *faturamentoService) AdicionarItens(ctx context.Context, req AdicionarIt
 		return fmt.Errorf("service.AdicionarItens: nota_id inválido: %w", err)
 	}
 
-	// Verifica se a nota está aberta antes de adicionar itens
 	status, err := s.repo.VerificarStatusNota(ctx, notaUUID)
 	if err != nil {
 		return fmt.Errorf("service.AdicionarItens: nota não encontrada: %w", err)
@@ -171,15 +170,12 @@ func (s *faturamentoService) ListarNotas(ctx context.Context) ([]CriarNotaRespon
 	return resp, nil
 }
 
-// ImprimirNota é o método mais crítico: debita o estoque item a item
-// e faz rollback manual se qualquer débito falhar.
 func (s *faturamentoService) ImprimirNota(ctx context.Context, id string) (*ImprimirNotaResponse, error) {
 	uuid, err := parseUUID(id)
 	if err != nil {
 		return nil, fmt.Errorf("service.ImprimirNota: id inválido: %w", err)
 	}
 
-	// 1. Verifica se a nota está aberta
 	status, err := s.repo.VerificarStatusNota(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("service.ImprimirNota: nota não encontrada: %w", err)
@@ -188,13 +184,11 @@ func (s *faturamentoService) ImprimirNota(ctx context.Context, id string) (*Impr
 		return nil, fmt.Errorf("service.ImprimirNota: nota já foi fechada ou impressa")
 	}
 
-	// 2. Busca a nota completa para ter o num_seq
 	nota, err := s.repo.BuscarNotaPorId(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("service.ImprimirNota: %w", err)
 	}
 
-	// 3. Busca os itens da nota
 	items, err := s.repo.BuscarItemsNota(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("service.ImprimirNota: erro ao buscar itens: %w", err)
@@ -203,7 +197,6 @@ func (s *faturamentoService) ImprimirNota(ctx context.Context, id string) (*Impr
 		return nil, fmt.Errorf("service.ImprimirNota: nota sem itens não pode ser impressa")
 	}
 
-	// 4. Debita o estoque item a item, guardando os já debitados para rollback
 	debitados := make([]DebitarEstoqueRequest, 0, len(items))
 
 	for _, item := range items {
@@ -215,7 +208,6 @@ func (s *faturamentoService) ImprimirNota(ctx context.Context, id string) (*Impr
 		}
 
 		if err := s.debitarEstoque(ctx, req); err != nil {
-			// Falhou — inicia rollback de todos os itens já debitados
 			s.rollbackDebitos(ctx, debitados, id, nota.NumSeq)
 			return nil, fmt.Errorf("service.ImprimirNota: falha ao debitar produto %s: %w", req.ProdutoID, err)
 		}
@@ -223,10 +215,8 @@ func (s *faturamentoService) ImprimirNota(ctx context.Context, id string) (*Impr
 		debitados = append(debitados, req)
 	}
 
-	// 5. Fecha a nota atomicamente no banco
 	notaFechada, err := s.repo.FecharNotaAtomica(ctx, uuid)
 	if err != nil {
-		// Débitos já foram feitos mas a nota não fechou — faz rollback
 		s.rollbackDebitos(ctx, debitados, id, nota.NumSeq)
 		return nil, fmt.Errorf("service.ImprimirNota: falha ao fechar nota: %w", err)
 	}
@@ -238,8 +228,6 @@ func (s *faturamentoService) ImprimirNota(ctx context.Context, id string) (*Impr
 		PrintedAt: notaFechada.PrintedAt.Time.Format(time.RFC3339),
 	}, nil
 }
-
-// ─── Comunicação com o serviço de estoque ──────────────────────────────────
 
 func (s *faturamentoService) debitarEstoque(ctx context.Context, req DebitarEstoqueRequest) error {
 	body, _ := json.Marshal(req)
@@ -307,7 +295,6 @@ func (s *faturamentoService) rollbackDebitos(
 	}
 }
 
-// ─── Estoque ───────────────────────────────────────────────────────────────
 func (s *faturamentoService) buscarProduto(ctx context.Context, produtoID string) (*EstoqueProdutoResponse, error) {
 	httpReq, err := http.NewRequestWithContext(
 		ctx,
@@ -340,8 +327,6 @@ func (s *faturamentoService) buscarProduto(ctx context.Context, produtoID string
 
 	return &produto, nil
 }
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
 
 func uuidToString(b [16]byte) string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x",
